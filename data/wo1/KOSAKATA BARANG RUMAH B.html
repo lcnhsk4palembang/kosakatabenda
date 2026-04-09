@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Benda di Rumah - LCN Palembang</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --accent: #e67e22;
+            --bg: #f0f2f5;
+            --white: #ffffff;
+        }
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+        header {
+            background: var(--primary);
+            color: white;
+            width: 100%;
+            text-align: center;
+            padding: 20px 0;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        header h1 { margin: 0; font-size: 1.2rem; letter-spacing: 1px; }
+        header p { margin: 5px 0 0; font-size: 0.8rem; opacity: 0.8; }
+
+        .tab-container {
+            display: flex;
+            overflow-x: auto;
+            width: 100%;
+            background: white;
+            border-bottom: 2px solid #ddd;
+        }
+        .tab {
+            flex: 1;
+            padding: 15px 20px;
+            text-align: center;
+            cursor: pointer;
+            white-space: nowrap;
+            font-weight: bold;
+            color: #7f8c8d;
+            transition: 0.3s;
+        }
+        .tab.active {
+            color: var(--accent);
+            border-bottom: 3px solid var(--accent);
+        }
+
+        .content {
+            width: 90%;
+            max-width: 450px;
+            margin-top: 30px;
+            text-align: center;
+        }
+
+        .progress { margin-bottom: 10px; font-size: 0.9rem; color: #666; }
+
+        .card-container {
+            perspective: 1000px;
+            height: 320px;
+            cursor: pointer;
+            margin-bottom: 25px;
+        }
+        .card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+        }
+        .flipped .card-inner { transform: rotateY(180deg); }
+        .card-front, .card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border-radius: 20px;
+            background: var(--white);
+            padding: 30px;
+            box-sizing: border-box;
+        }
+        .card-back { transform: rotateY(180deg); background: #fffcf5; }
+
+        .hanzi { font-size: 60px; font-family: "SimSun", serif; font-weight: bold; color: var(--primary); margin: 0; }
+        .pinyin { font-size: 24px; color: var(--accent); margin: 15px 0; }
+        .meaning { font-size: 20px; color: #34495e; font-weight: 500; }
+        .hint { font-size: 11px; color: #bbb; margin-top: 30px; text-transform: uppercase; }
+
+        .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        button {
+            padding: 15px;
+            border: none;
+            border-radius: 12px;
+            background: var(--primary);
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        button:active { transform: scale(0.98); }
+        .shuffle-btn { grid-column: span 2; background: #27ae60; }
+        
+        .empty-state { padding: 50px; color: #95a5a6; font-style: italic; }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>BENDA DIRUMAH</h1>
+    <p>by lcnpalembang - 08994477998</p>
+</header>
+
+<div class="tab-container">
+    <div class="tab active" onclick="switchTab('ruang_tamu', this)">Ruang Tamu</div>
+    <div class="tab" onclick="switchTab('dapur', this)">Dapur</div>
+    <div class="tab" onclick="switchTab('kamar_tidur', this)">Kamar Tidur</div>
+    <div class="tab" onclick="switchTab('kamar_mandi', this)">Kamar Mandi</div>
+    <div class="tab" onclick="switchTab('ruang_kerja', this)">Ruang Kerja</div>
+</div>
+
+<div class="content">
+    <div id="flashcard-area">
+        <div class="progress" id="progressText">Memuat...</div>
+        
+        <div class="card-container" id="cardBox" onclick="this.classList.toggle('flipped')">
+            <div class="card-inner">
+                <div class="card-front">
+                    <p class="hanzi" id="frontHanzi"></p>
+                    <p class="hint">Ketuk untuk arti</p>
+                </div>
+                <div class="card-back">
+                    <p class="pinyin" id="backPinyin"></p>
+                    <p class="meaning" id="backMeaning"></p>
+                    <p class="hint">Ketuk untuk kembali</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button onclick="prevCard()">Kembali</button>
+            <button onclick="nextCard()">Lanjut</button>
+            <button class="shuffle-btn" onclick="shuffleCards()">Acak Urutan</button>
+        </div>
+    </div>
+    <div id="empty-msg" class="empty-state" style="display:none;">
+        Kosakata belum ditambahkan untuk ruangan ini.
+    </div>
+</div>
+
+<script>
+    const allData = {
+        ruang_tamu: [
+            {h: "客厅", p: "kètīng", m: "Ruang tamu"},
+            {h: "沙发", p: "shāfā", m: "Sofa"},
+            {h: "茶几", p: "chájī", m: "Meja kopi"},
+            {h: "电视", p: "diànshì", m: "Televisi"},
+            {h: "电视柜", p: "diànshì guì", m: "Lemari TV"},
+            {h: "遥控器", p: "yáokòngqì", m: "Remote control"},
+            {h: "灯", p: "dēng", m: "Lampu"},
+            {h: "吊灯", p: "diàodēng", m: "Lampu gantung / hias"},
+            {h: "落地灯", p: "luòdìdēng", m: "Lampu berdiri"},
+            {h: "墙灯", p: "qiángdēng", m: "Lampu dinding"},
+            {h: "窗帘", p: "chuānglián", m: "Tirai / Gorden"},
+            {h: "窗户", p: "chuānghu", m: "Jendela"},
+            {h: "画", p: "huà", m: "Lukisan"},
+            {h: "挂钟", p: "guàzhōng", m: "Jam dinding"},
+            {h: "花瓶", p: "huāpíng", m: "Vas"},
+            {h: "植物", p: "zhíwù", m: "Tanaman"},
+            {h: "音响", p: "yīnxiǎng", m: "Speaker / Sound system"},
+            {h: "空调", p: "kòngtiáo", m: "AC"},
+            {h: "桌子", p: "zhuōzi", m: "Meja"},
+            {h: "椅子", p: "yǐzi", m: "Kursi"},
+            {h: "靠垫", p: "kàodiàn", m: "Bantal sofa"},
+            {h: "相框", p: "xiàngkuàng", m: "Bingkai foto"},
+            {h: "相片", p: "xiàngpiàn", m: "Foto"},
+            {h: "地板", p: "dìbǎn", m: "Lantai"},
+            {h: "门铃", p: "ménlíng", m: "Bel pintu"},
+            {h: "鞋柜", p: "xiéguì", m: "Lemari sepatu"},
+            {h: "镜子", p: "jìngzi", m: "Cermin"},
+            {h: "电话", p: "diànhuà", m: "Telepon"},
+            {h: "烟灰缸", p: "yānhuīgāng", m: "Asbak"},
+            {h: "杯子", p: "bēizi", m: "Gelas / Cangkir"},
+            {h: "杯垫", p: "bēidiàn", m: "Tatakan gelas"},
+            {h: "电视遥控", p: "diànshì yáokòng", m: "Remote TV"},
+            {h: "开关", p: "kāiguān", m: "Sakelar"},
+            {h: "电线", p: "diànxiàn", m: "Kabel listrik"},
+            {h: "电源插座", p: "diànyuán chāzuò", m: "Stopkontak"},
+            {h: "插头", p: "chātóu", m: "Steker / Colokan"},
+            {h: "衣帽架", p: "yīmàojià", m: "Gantungan topi & baju"},
+            {h: "壁炉", p: "bìlú", m: "Perapian"},
+            {h: "猫眼", p: "māoyǎn", m: "Lubang intip pintu"},
+            {h: "茶具", p: "chájù", m: "Set alat teh"},
+            {h: "地毯", p: "dìtǎn", m: "Karpet"},
+            {h: "路由器", p: "lùyóuqì", m: "Router Wi-Fi"},
+            {h: "纸巾盒", p: "zhǐjīn hé", m: "Kotak tisu"},
+            {h: "拖鞋", p: "tuōxié", m: "Sandal rumah"},
+            {h: "电扇", p: "diànshàn", m: "Kipas angin"},
+            {h: "空气净化器", p: "kōngqì jìnghuàqì", m: "Pemurni udara"},
+            {h: "吸尘器", p: "xīchénqì", m: "Penghisap debu"}
+        ],
+        dapur: [
+            {h: "厨房", p: "chúfáng", m: "Dapur"},
+            {h: "炉灶", p: "lúzào", m: "Kompor (umum)"},
+            {h: "燃气灶", p: "ránqì zào", m: "Kompor gas"},
+            {h: "电磁炉", p: "diàncí lú", m: "Kompor induksi"},
+            {h: "抽油烟机", p: "chōuyóuyānjī", m: "Penghisap asap dapur"},
+            {h: "烤箱", p: "kǎoxiāng", m: "Oven"},
+            {h: "微波炉", p: "wēibōlú", m: "Microwave"},
+            {h: "电饭锅", p: "diànfànguō", m: "Penanak nasi"},
+            {h: "洗碗机", p: "xǐwǎnjī", m: "Mesin pencuci piring"},
+            {h: "冰箱", p: "bīngxiāng", m: "Kulkas / Lemari es"},
+            {h: "洗碗池", p: "xǐwǎnchí", m: "Bak cuci piring"},
+            {h: "水龙头", p: "shuǐlóngtóu", m: "Keran air"},
+            {h: "锅", p: "guō", m: "Panci / Wajan (umum)"},
+            {h: "炒锅", p: "chǎoguō", m: "Wajan / Penggorengan"},
+            {h: "平底锅", p: "píngdǐ guō", m: "Wajan datar / Teflon"},
+            {h: "汤锅", p: "tāngguǒ", m: "Panci sup"},
+            {h: "高压锅", p: "gāoyāguǒ", m: "Panci presto"},
+            {h: "碗", p: "wǎn", m: "Mangkuk"},
+            {h: "盘子", p: "pánzi", m: "Piring"},
+            {h: "筷子", p: "kuàizi", m: "Sumpit"},
+            {h: "勺子", p: "sháozi", m: "Sendok"},
+            {h: "叉子", p: "chāzi", m: "Garpu"},
+            {h: "刀", p: "dāo", m: "Pisau"},
+            {h: "砧板", p: "zhēnbǎn", m: "Talenan"},
+            {h: "篮子", p: "lánzi", m: "Keranjang"},
+            {h: "围裙", p: "wéiqún", m: "Celemek"},
+            {h: "海绵", p: "hǎimián", m: "Spons"},
+            {h: "抹布", p: "mǒ bù", m: "Kain lap"},
+            {h: "垃圾桶", p: "lājītǒng", m: "Tempat sampah"},
+            {h: "饮水机", p: "yǐnshuǐjī", m: "Dispenser air"},
+            {h: "水壶", p: "shuǐhú", m: "Teko / Ketel"},
+            {h: "电水壶", p: "diàn shuǐhú", m: "Ketel listrik"},
+            {h: "咖啡机", p: "kāifēijī", m: "Mesin kopi"},
+            {h: "榨汁机", p: "zhàzhījī", m: "Juicer"},
+            {h: "搅拌机", p: "jiǎobànjī", m: "Blender / Mikser"},
+            {h: "碗柜", p: "wǎnguì", m: "Lemari piring"},
+            {h: "调料瓶", p: "tiáoliào píng", m: "Botol bumbu"},
+            {h: "漏勺", p: "lòusháo", m: "Sendok berlubang"},
+            {h: "保鲜膜", p: "bǎoxiānmó", m: "Plastik pembungkus"},
+            {h: "保鲜盒", p: "bǎoxiānhé", m: "Wadah makanan"},
+            {h: "开罐器", p: "kāiguànqì", m: "Pembuka kaleng"},
+            {h: "开瓶器", p: "kāipíngqì", m: "Pembuka botol"},
+            {h: "餐桌", p: "cānzhuō", m: "Meja makan"},
+            {h: "碗筷架", p: "wǎnkuài jià", m: "Rak piring & sumpit"}
+        ],
+        kamar_tidur: [
+            {h: "卧室", p: "wòshì", m: "Kamar tidur"},
+            {h: "床", p: "chuáng", m: "Tempat tidur / Kasur"},
+            {h: "床垫", p: "chuángdiàn", m: "Matras / Kasur"},
+            {h: "床单", p: "chuángdān", m: "Sprei"},
+            {h: "枕头", p: "zhěntou", m: "Bantal"},
+            {h: "枕套", p: "zhěntào", m: "Sarung bantal"},
+            {h: "被子", p: "bèizi", m: "Selimut"},
+            {h: "衣柜", p: "yīguì", m: "Lemari pakaian"},
+            {h: "衣架", p: "yījià", m: "Gantungan baju / Hanger"},
+            {h: "梳妆台", p: "shūzhuāngtái", m: "Meja rias"},
+            {h: "镜子", p: "jìngzi", m: "Cermin"},
+            {h: "床头柜", p: "chuángtóuguì", m: "Meja samping / Nakas"},
+            {h: "床头灯", p: "chuángtóudēng", m: "Lampu tidur"},
+            {h: "闹钟", p: "nàozhōng", m: "Jam weker / Alarm"},
+            {h: "地毯", p: "dìtǎn", m: "Karpet"},
+            {h: "蚊帐", p: "wénzhàng", m: "Kelambu"},
+            {h: "挂钩", p: "guàgōu", m: "Kait dinding / Gantungan"},
+            {h: "香薰机", p: "xiāngxūnjī", m: "Diffuser / Aroma"},
+            {h: "时钟", p: "shízhōng", m: "Jam"}
+        ],
+        kamar_mandi: [
+            {h: "浴室", p: "yùshì", m: "Kamar mandi"},
+            {h: "卫生间", p: "wèishēngjiān", m: "Toilet / Kamar kecil"},
+            {h: "浴鞋", p: "yùxié", m: "Sandal kamar mandi"},
+            {h: "马桶", p: "mǎtǒng", m: "Kloset / Toilet"},
+            {h: "洗脸盆", p: "xǐliǎnpén", m: "Wastafel cuci muka"},
+            {h: "水龙头", p: "shuǐlóngtóu", m: "Keran air"},
+            {h: "浴缸", p: "yùgāng", m: "Bak mandi / Bathtub"},
+            {h: "花洒", p: "huāsǎ", m: "Kepala pancuran (Shower)"},
+            {h: "浴帘", p: "yùlián", m: "Tirai kamar mandi"},
+            {h: "镜子", p: "jìngzi", m: "Cermin"},
+            {h: "毛巾", p: "máojīn", m: "Handuk wajah"},
+            {h: "浴巾", p: "yùjīn", m: "Handuk mandi"},
+            {h: "剃须刀", p: "tìxūdāo", m: "Pisau cukur"},
+            {h: "毛巾架", p: "máojīn jià", m: "Rak handuk"},
+            {h: "牙刷", p: "yáshuā", m: "Sikat gigi"},
+            {h: "牙刷杯", p: "yáshuā bēi", m: "Gelas sikat gigi"},
+            {h: "肥皂盒", p: "féizào hé", m: "Kotak sabun"},
+            {h: "厕纸架", p: "cèzhǐ jià", m: "Tempat tisu toilet"},
+            {h: "吹风机", p: "chuīfēngjī", m: "Pengering rambut"},
+            {h: "浴袍", p: "yùpáo", m: "Jubah mandi"},
+            {h: "洗衣机", p: "xǐyījī", m: "Mesin cuci"},
+            {h: "洗衣篮", p: "xǐyīlán", m: "Keranjang cucian"}
+        ],
+        ruang_kerja: [
+            {h: "书房", p: "shūfáng", m: "Ruang belajar / kerja"},
+            {h: "书桌", p: "shūzhuō", m: "Meja tulis / Meja kerja"},
+            {h: "椅子", p: "yǐzi", m: "Kursi"},
+            {h: "电脑椅", p: "diànnǎo yǐ", m: "Kursi komputer"},
+            {h: "书架", p: "shūjià", m: "Rak buku"},
+            {h: "书柜", p: "shūguì", m: "Lemari buku"},
+            {h: "电脑", p: "diànnǎo", m: "Komputer"},
+            {h: "显示器", p: "xiǎnshìqì", m: "Monitor"},
+            {h: "键盘", p: "jiànpán", m: "Papan ketik (Keyboard)"},
+            {h: "鼠标", p: "shǔbiāo", m: "Tetikus (Mouse)"},
+            {h: "打印机", p: "dǎyìnjī", m: "Pencetak (Printer)"},
+            {h: "扫描仪", p: "sǎomiáoyí", m: "Pemindai (Scanner)"},
+            {h: "台灯", p: "táidēng", m: "Lampu meja"},
+            {h: "文具", p: "wénjù", m: "Alat tulis"},
+            {h: "笔", p: "bǐ", m: "Pena / Bolpoin"},
+            {h: "笔记本", p: "bǐjìběn", m: "Buku catatan / Notebook"},
+            {h: "文件夹", p: "wénjiànjiā", m: "Map berkas / Folder"},
+            {h: "文件柜", p: "wénjiànguì", m: "Lemari arsip"},
+            {h: "订书机", p: "dìngshūjī", m: "Stapler"},
+            {h: "胶带", p: "jiāodài", m: "Selotip / Lakban"},
+            {h: "剪刀", p: "jiǎndāo", m: "Gunting"},
+            {h: "闹钟", p: "nàozhōng", m: "Jam weker / Alarm"},
+            {h: "计算器", p: "jìsuànqì", m: "Kalkulator"},
+            {h: "便签", p: "biànqiān", m: "Catatan tempel"},
+            {h: "笔筒", p: "bǐtǒng", m: "Tempat pena"},
+            {h: "碎纸机", p: "suìzhǐjī", m: "Penghancur kertas"}
+        ]
+    };
+
+    let currentRoom = 'ruang_tamu';
+    let currentIndex = 0;
+    let currentSet = [...allData[currentRoom]];
+
+    function switchTab(room, element) {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        element.classList.add('active');
+        currentRoom = room;
+        currentSet = [...allData[currentRoom]];
+        currentIndex = 0;
+        if (currentSet.length > 0) {
+            document.getElementById('flashcard-area').style.display = 'block';
+            document.getElementById('empty-msg').style.display = 'none';
+            updateCard();
+        } else {
+            document.getElementById('flashcard-area').style.display = 'none';
+            document.getElementById('empty-msg').style.display = 'block';
+        }
+    }
+
+    function updateCard() {
+        const cardBox = document.getElementById('cardBox');
+        cardBox.classList.remove('flipped');
+        setTimeout(() => {
+            const item = currentSet[currentIndex];
+            document.getElementById('frontHanzi').innerText = item.h;
+            document.getElementById('backPinyin').innerText = item.p;
+            document.getElementById('backMeaning').innerText = item.m;
+            document.getElementById('progressText').innerText = `Kartu ${currentIndex + 1} dari ${currentSet.length}`;
+        }, 150);
+    }
+
+    function nextCard() {
+        if (currentSet.length === 0) return;
+        currentIndex = (currentIndex + 1) % currentSet.length;
+        updateCard();
+    }
+
+    function prevCard() {
+        if (currentSet.length === 0) return;
+        currentIndex = (currentIndex - 1 + currentSet.length) % currentSet.length;
+        updateCard();
+    }
+
+    function shuffleCards() {
+        if (currentSet.length === 0) return;
+        currentSet.sort(() => Math.random() - 0.5);
+        currentIndex = 0;
+        updateCard();
+    }
+
+    updateCard();
+</script>
+
+</body>
+</html>
